@@ -177,12 +177,12 @@ public class TransportationService {
         ids.add(transportation.getOriginLocation().getLocationId());
         ids.add(transportation.getDestinationLocation().getLocationId());
 
-        if(locationDao.findByLocationIds(ids).size() < MAX_NUM_OF_FOUND_LOCATIONS_BY_ID ||
-        !(transportationDao.findById(transportation.getTransportationId()).isPresent())) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
         try{
+            if(locationDao.findByLocationIds(ids).size() < MAX_NUM_OF_FOUND_LOCATIONS_BY_ID ||
+                    !(transportationDao.findById(transportation.getTransportationId()).isPresent())) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
             transportationDao.save(transportation);
         }
         catch (Exception e) {
