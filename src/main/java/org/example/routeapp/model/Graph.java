@@ -42,28 +42,35 @@ public class Graph {
         Set<Location> visited = new HashSet<>();
         List<Location> currentPath = new ArrayList<>();
         List<TransportationType> currentTransportationTypes = new ArrayList<>();
-        dfs(start, end, visited, currentPath, currentTransportationTypes,allPaths, allTransportationTypes, date);
+        List<List<Integer>> currentOperatingDays = new ArrayList<>();
+        dfs(start, end, visited, currentPath, currentTransportationTypes,allPaths, allTransportationTypes,
+                currentOperatingDays, date);
         return allPaths;
     }
 
     //depth-first search, saves found paths & transportation types as well
     private void dfs(Location currentNode, Location destinationNode, Set<Location> visited,
                      List<Location> currentPath, List<TransportationType> currentTransportationTypes,
-                     List<List<Location>> allPaths, List<List<TransportationType>> allTransportationTypes, String date) {
+                     List<List<Location>> allPaths, List<List<TransportationType>> allTransportationTypes,
+                     List<List<Integer>> currentOperatingDays, String date) {
 
         //if reached the destination, record the path
         if (currentNode == destinationNode) {
             currentPath.add(currentNode);
 
-            if (isValidPath(currentPath, currentTransportationTypes, date)) {
+            if (isValidPath(currentTransportationTypes, currentOperatingDays, date)) {
                 allPaths.add(new ArrayList<>(currentPath));
                 allTransportationTypes.add(new ArrayList<>(currentTransportationTypes));
-                currentTransportationTypes.clear();
             }
             currentPath.remove(currentPath.size() - 1);  // backtrack
+            if(currentTransportationTypes.size() >= 1){
+                currentTransportationTypes.remove(currentOperatingDays.size() - 1);
+            }
+            if(currentOperatingDays.size() >= 1){
+                currentOperatingDays.remove(currentOperatingDays.size() - 1);
+            }
             return;
         }
-        currentTransportationTypes.clear();
 
         visited.add(currentNode);
         currentPath.add(currentNode);
@@ -72,22 +79,28 @@ public class Graph {
         if (adjacencyList.containsKey(currentNode)) {
             for (Edge edge : adjacencyList.get(currentNode)) {
                 Location neighbor = edge.getLocation();
-
+                currentTransportationTypes.add(edge.getTransportationType());  //save transportation types while exploring
+                currentOperatingDays.add(edge.getOperatingDays());  //save operating days while exploring
                 if (!visited.contains(neighbor)) {
                     dfs(neighbor, destinationNode, visited, currentPath, currentTransportationTypes,
-                            allPaths, allTransportationTypes, date);
+                            allPaths, allTransportationTypes, currentOperatingDays, date);
                 }
             }
         }
-
+        if(currentTransportationTypes.size() >= 1){
+            currentTransportationTypes.remove(currentTransportationTypes.size() - 1);
+        }
+        if(currentOperatingDays.size() >= 1){
+            currentOperatingDays.remove(currentOperatingDays.size() - 1);
+        }
         //backtrack - removes currentNode from the path and unmarks it as visited
         visited.remove(currentNode);
         currentPath.remove(currentPath.size() - 1);
     }
 
     //checks if current path is valid
-    private boolean isValidPath(List<Location> currentPath, List<TransportationType> currentTransportationTypes,
-                                String date) {
+    private boolean isValidPath(List<TransportationType> currentTransportationTypes,
+                                List<List<Integer>> currentOperatingDays, String date) {
 
         String dayNumberOfWeek;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");  //formats date
@@ -102,35 +115,39 @@ public class Graph {
         int flightCount = 0;
         int pathCount = 0;
 
-
-        for (int i = 0; i < currentPath.size()-1; i++) {
-            List<Edge> edgeList = adjacencyList.get(currentPath.get(i));
-            for (Edge edge : edgeList) {
-                if(edge.getLocation().equals(currentPath.get(i+1))) {
-                    if(!(edge.getOperatingDays().contains(Integer.parseInt(dayNumberOfWeek)))){  //if transportation does not operate that day
-                        return false;
-                    }
-                    switch (edge.getTransportationType()) {   //checks transportation types of path whether it is valid or not
-                        case BUS, UBER, SUBWAY:
-                            pathCount++;
-                            if (pathCount ==2 && flightCount == 0) {
-                                return false;
-                            }
-                            else if(pathCount > 2){
-                                return false;
-                            }
-                            break;
-                        case FLIGHT:
-                            flightCount++;
-                            if(flightCount > 1) {
-                                return false;
-                            }
-                            break;
-                    }
-                    currentTransportationTypes.add(edge.getTransportationType());
-                }
+        for(int i = 0; i < currentOperatingDays.size(); i++){
+            if(!(currentOperatingDays.get(i).contains(Integer.parseInt(dayNumberOfWeek)))) {
+                return false;
             }
         }
+
+        if(currentTransportationTypes.size() == 1 &&
+                currentTransportationTypes.get(0) != TransportationType.FLIGHT){
+                    return false;
+        }
+
+        for (TransportationType transportationType : currentTransportationTypes) {
+                switch (transportationType) {   //checks transportation types of path whether it is valid or not
+                    case BUS, UBER, SUBWAY:
+                        pathCount++;
+                        if (pathCount ==2 && flightCount == 0) {
+                            return false;
+                        }
+                        else if(pathCount > 2){
+                            return false;
+                        }
+                        break;
+                    case FLIGHT:
+                        flightCount++;
+
+                        if(flightCount > 1) {
+                            return false;
+                        }
+                        break;
+                }
+        }
+
+
         return true;
     }
 
