@@ -1,7 +1,8 @@
 package org.example.routeapp.controller;
 
 import org.example.routeapp.dto.IdResponseDto;
-import org.example.routeapp.dto.RouteResponseDto;
+import org.example.routeapp.dto.RouteDto;
+import org.example.routeapp.dto.RouteListResponseDto;
 import org.example.routeapp.model.Transportation;
 import org.example.routeapp.service.TransportationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,9 +36,9 @@ public class TransportationController {
     }
 
     @GetMapping("/origin/{originId}/dest/{destId}/date/{date}")
-    public ResponseEntity<RouteResponseDto> getTransportationsBetween(@PathVariable Long originId,
-                                                                      @PathVariable Long destId,
-                                                                      @PathVariable String date){
+    public ResponseEntity<RouteListResponseDto> getTransportationsBetween(@PathVariable Long originId,
+                                                                               @PathVariable Long destId,
+                                                                               @PathVariable String date){
         return transportationService.getTransportationsBetween(originId, destId, date);
     }
 

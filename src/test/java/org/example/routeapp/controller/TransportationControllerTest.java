@@ -1,6 +1,6 @@
 package org.example.routeapp.controller;
 
-import org.example.routeapp.dto.RouteResponseDto;
+import org.example.routeapp.dto.RouteListResponseDto;
 import org.example.routeapp.model.Location;
 import org.example.routeapp.model.TransportationType;
 import org.junit.jupiter.api.Test;
@@ -72,7 +72,7 @@ public class TransportationControllerTest {
         mockTransportationTypes.add(TransportationType.FLIGHT);
         mockAllTransportationTypes.add(mockTransportationTypes);
 
-        RouteResponseDto res = new RouteResponseDto(mockAllRoutes, mockAllTransportationTypes);
+        RouteListResponseDto res = new RouteListResponseDto(mockAllRoutes, mockAllTransportationTypes);
 
 
         when(transportationService.getTransportationsBetween(originId, destId, date))

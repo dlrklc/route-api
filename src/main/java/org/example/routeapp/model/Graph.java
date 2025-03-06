@@ -4,10 +4,12 @@ import java.text.SimpleDateFormat;
 
 import java.util.*;
 
+import static org.example.routeapp.model.TransportationType.BUS;
+
 public class Graph {
     //the graph will be represented as an adjacency list.
     //map to store each node (vertex) and its list of adjacent nodes (edges).
-    private Map<Location, List<Edge>> adjacencyList;
+    private Map<Location, List<Transportation>> adjacencyList;
 
     //initializes the adjacency list
     public Graph() {
@@ -23,84 +25,65 @@ public class Graph {
     }
 
     //adds edge to the graph
-    public void addEdge(Location vertex1, Location vertex2, TransportationType transportationType,
-                        List<Integer> operatingDays) {
-        if (!adjacencyList.containsKey(vertex1)) {
-            addVertex(vertex1);
+    public void addEdge(Transportation transportation) {
+        if (!adjacencyList.containsKey(transportation.getOriginLocation())) {
+            addVertex(transportation.getOriginLocation());
         }
-        if (!adjacencyList.containsKey(vertex2)) {
-            addVertex(vertex2);
+        if (!adjacencyList.containsKey(transportation.getDestinationLocation())) {
+            addVertex(transportation.getDestinationLocation());
         }
 
-        adjacencyList.get(vertex1).add(new Edge(vertex2, transportationType, operatingDays));
+        adjacencyList.get(transportation.getOriginLocation()).add(transportation);
     }
 
     //finds routes with depth-first search & initializes lists
-    public List<List<Location>> findAllRoutes(Location start, Location end, String date,
-                                              List<List<TransportationType>> allTransportationTypes) {
-        List<List<Location>> allPaths = new ArrayList<>();
+    public List<List<Transportation>> findAllRoutes(Location start, Location end, String date) {
+        List<List<Transportation>> allPaths = new ArrayList<>();
         Set<Location> visited = new HashSet<>();
-        List<Location> currentPath = new ArrayList<>();
-        List<TransportationType> currentTransportationTypes = new ArrayList<>();
+        List<Transportation> currentPath = new ArrayList<>();
         List<List<Integer>> currentOperatingDays = new ArrayList<>();
-        dfs(start, end, visited, currentPath, currentTransportationTypes,allPaths, allTransportationTypes,
-                currentOperatingDays, date);
+        dfs(start, end, visited, currentPath, allPaths, date);
+
         return allPaths;
     }
 
     //depth-first search, saves found paths & transportation types as well
     private void dfs(Location currentNode, Location destinationNode, Set<Location> visited,
-                     List<Location> currentPath, List<TransportationType> currentTransportationTypes,
-                     List<List<Location>> allPaths, List<List<TransportationType>> allTransportationTypes,
-                     List<List<Integer>> currentOperatingDays, String date) {
+                     List<Transportation> currentPath,
+                     List<List<Transportation>> allPaths, String date) {
 
         //if reached the destination, record the path
         if (currentNode == destinationNode) {
-            currentPath.add(currentNode);
-
-            if (isValidPath(currentTransportationTypes, currentOperatingDays, date)) {
+            if (isValidPath(currentPath, date)) {
                 allPaths.add(new ArrayList<>(currentPath));
-                allTransportationTypes.add(new ArrayList<>(currentTransportationTypes));
             }
-            currentPath.remove(currentPath.size() - 1);  // backtrack
-            if(currentTransportationTypes.size() >= 1){
-                currentTransportationTypes.remove(currentOperatingDays.size() - 1);
-            }
-            if(currentOperatingDays.size() >= 1){
-                currentOperatingDays.remove(currentOperatingDays.size() - 1);
-            }
+              // backtrack
             return;
         }
 
         visited.add(currentNode);
-        currentPath.add(currentNode);
 
         //explores all neighbors of currentNode
         if (adjacencyList.containsKey(currentNode)) {
-            for (Edge edge : adjacencyList.get(currentNode)) {
-                Location neighbor = edge.getLocation();
-                currentTransportationTypes.add(edge.getTransportationType());  //save transportation types while exploring
-                currentOperatingDays.add(edge.getOperatingDays());  //save operating days while exploring
+            for (Transportation transportation : adjacencyList.get(currentNode)) {
+                currentPath.add(transportation);
+                Location neighbor = transportation.getDestinationLocation();
                 if (!visited.contains(neighbor)) {
-                    dfs(neighbor, destinationNode, visited, currentPath, currentTransportationTypes,
-                            allPaths, allTransportationTypes, currentOperatingDays, date);
+                    dfs(neighbor, destinationNode, visited, currentPath,
+                            allPaths, date);
                 }
+                currentPath.remove(currentPath.size() - 1);
             }
-        }
-        if(currentTransportationTypes.size() >= 1){
-            currentTransportationTypes.remove(currentTransportationTypes.size() - 1);
-        }
-        if(currentOperatingDays.size() >= 1){
-            currentOperatingDays.remove(currentOperatingDays.size() - 1);
         }
         //backtrack - removes currentNode from the path and unmarks it as visited
         visited.remove(currentNode);
-        currentPath.remove(currentPath.size() - 1);
+        /*if(currentOperatingDays.size() >= 1){
+            currentPath.remove(currentPath.size() - 1);
+        }*/
     }
 
     //checks if current path is valid
-    private boolean isValidPath(List<TransportationType> currentTransportationTypes,
-                                List<List<Integer>> currentOperatingDays, String date) {
+    private boolean isValidPath(List<Transportation> currentPath, String date) {
 
         String dayNumberOfWeek;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");  //formats date
@@ -115,36 +98,33 @@ public class Graph {
         int flightCount = 0;
         int pathCount = 0;
 
-        for(int i = 0; i < currentOperatingDays.size(); i++){
-            if(!(currentOperatingDays.get(i).contains(Integer.parseInt(dayNumberOfWeek)))) {
-                return false;
-            }
-        }
-
-        if(currentTransportationTypes.size() == 1 &&
-                currentTransportationTypes.get(0) != TransportationType.FLIGHT){
+        if(currentPath.size() == 1 &&
+                currentPath.get(0).getTransportationType() != TransportationType.FLIGHT){
                     return false;
         }
 
-        for (TransportationType transportationType : currentTransportationTypes) {
-                switch (transportationType) {   //checks transportation types of path whether it is valid or not
-                    case BUS, UBER, SUBWAY:
-                        pathCount++;
-                        if (pathCount ==2 && flightCount == 0) {
-                            return false;
-                        }
-                        else if(pathCount > 2){
-                            return false;
-                        }
-                        break;
-                    case FLIGHT:
-                        flightCount++;
+        for (Transportation transportation : currentPath) {
+            if(!(transportation.getOperatingDays().contains(Integer.parseInt(dayNumberOfWeek)))) {
+                return false;
+            }
+            switch (transportation.getTransportationType()) {   //checks transportation types of path whether it is valid or not
+                case BUS, UBER, SUBWAY:
+                    pathCount++;
+                    if (pathCount ==2 && flightCount == 0) {
+                        return false;
+                    }
+                    else if(pathCount > 2){
+                        return false;
+                    }
+                    break;
+                case FLIGHT:
+                    flightCount++;
 
-                        if(flightCount > 1) {
-                            return false;
-                        }
-                        break;
-                }
+                    if(flightCount > 1) {
+                        return false;
+                    }
+                    break;
+            }
         }
 
 
@@ -155,7 +135,7 @@ public class Graph {
     public void displayGraph() {
         for (Location vertex : adjacencyList.keySet()) {
             System.out.print(vertex + ": ");
-            for (Edge adjacentVertex : adjacencyList.get(vertex)) {
+            for (Transportation adjacentVertex : adjacencyList.get(vertex)) {
                 System.out.print(adjacentVertex + " ");
             }
             System.out.println();
